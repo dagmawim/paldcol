@@ -2,12 +2,20 @@
 
 import socket
 
+'''
+Status codes
+'''
 SUCCESS = 'success'
 SERVER_ERROR = 'server'
 CLIENT_ERROR = 'client'
 
 
 def connect_to_padcol_server(command):
+    '''
+    used a socker to connect to a paldcol server
+    :param command:
+    :return:
+    '''
     client = None
     connected = False
 
@@ -29,25 +37,32 @@ def connect_to_padcol_server(command):
     return client, connected
 
 
-def handle_response(data):
-    response = data.split(',')
-    return response
-
-
-def parse_command(command):
-    return command.split(' ')
-
-
 def run_command(command, client, is_connected):
+    '''
+    runs the command through the client connection, if
+    the connection has been established
+
+    :param command:
+    :param client:
+    :param is_connected:
+    :return:
+    '''
     if is_connected:
         client.send(command)
-        response = handle_response(client.recv(2048))
+        response = client.recv(2048).split(',')
         return response
     else:
         return CLIENT_ERROR, "[!!] No connection established..."
 
 
 def run_once(is_connected, args):
+    '''
+    Do not create a persistent connection but only run a command once
+    and close the connection
+    :param is_connected:
+    :param args:
+    :return:
+    '''
     if is_connected:
         print "[!!] Persistent connection already established, terminate before proceeding"
         return
@@ -66,6 +81,12 @@ def run_once(is_connected, args):
 
 
 def term_connection(is_connected, client):
+    '''
+    function to abstract the tasks required to close a connection
+    :param is_connected:
+    :param client:
+    :return:
+    '''
     if is_connected:
         print "Closing connection with %s:%d..." % client.getsockname()
         client.send('term')
@@ -75,16 +96,28 @@ def term_connection(is_connected, client):
 
 
 def exit_cli(is_connected, client):
+    '''
+    exit the cli when user types 'exit'
+    :param is_connected:
+    :param client:
+    :return:
+    '''
     term_connection(is_connected, client)
     print "bye bye..."
     exit(0)
 
 
 def print_usage():
+    '''
+    Prints the usage string
+    :return:
+    '''
     print """  
     paldcol protocol usage:
             connect [ip] [port] : connects with a paldcol server listening on this ip, port
-            echo [item] : prints out the supplied item command
+            once [ip] [port] [normal arg] : runs a command in a non-persistent connection. normal arg is
+                some other command in this list.  
+            echo [item] : prints out the supplied item
             check [item] [item] .. : checks if the supplied items are palindromes, if yes stores them
             state [option]:
                     option == num  : return the number of palindromes found so far
@@ -100,6 +133,13 @@ def print_usage():
 
 
 def run(command, client, is_connected):
+    '''
+    Run the application for paldcol
+    :param command:
+    :param client:
+    :param is_connected:
+    :return:
+    '''
     response = run_command(' '.join(command), client, is_connected)
     status = response[0]
     data = ','.join(response[1:])
@@ -109,14 +149,17 @@ def run(command, client, is_connected):
         print "error ==> ", data
 
 
-
 def main():
+    '''
+    Main function to run and connect to a paldcol server
+    :return:
+    '''
     prompt = "$ paldcol : "
     is_connected = False
     client = None
 
     while True:
-        command = parse_command(raw_input(prompt))
+        command = raw_input(prompt).split(' ')
 
         if command[0] == 'term':
             term_connection(is_connected, client)
