@@ -1,7 +1,5 @@
 # Simple client server palindrome protocol aka paldcol
 
-Currently in the works....
-
 To run
 
     python server.py
@@ -29,3 +27,6 @@ then
     $ paldcol : connect localhost 5555 # sets up a persistent connection 
     $ paldcol : once localhost 5555 del -1 # deletes everything in pal db, non persistent connection
     
+to run tests, type
+
+        python server.py --test

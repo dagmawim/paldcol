@@ -3,6 +3,9 @@
 import socket
 from threading import Thread
 import json
+import os
+import signal
+import argparse
 
 SUCCESS = 'success'
 SERVER_ERROR = 'server'
@@ -17,7 +20,7 @@ class Client(Thread):
         self.ip = ip
         self.port = port
         self.conn = conn
-        print "[+] client connected at %s:%d" % (ip,port)
+        print "[+] client connected at %s:%d" % (ip, port)
 
     def close_connection(self):
         print "closing connection from %s:%d" % (self.ip, self.port)
@@ -93,10 +96,11 @@ class Client(Thread):
 
     @staticmethod
     def parse_request(request):
-            return request.split(' ')
+        return request.split(' ')
 
     def handle_command(self, request):
-        print "server received command: '%s' from %s:%d" % (request, self.ip, self.port)
+        print "server received command: '%s' from %s:%d" % (
+            request, self.ip, self.port)
         command = self.parse_request(request)
         if command[0] == 'term':
             self.close_connection()
@@ -119,7 +123,6 @@ class Client(Thread):
         while True:
             status, response = self.handle_command(self.conn.recv(2048))
             full_response = str(status) + ',' + str(response)
-            # print "sending...", full_response
             self.conn.send(full_response)
 
 
@@ -136,9 +139,86 @@ def main():
         new_client.start()
 
 
+def run_asserts(new_client):
+    commands_and_results = [
+        ('echo test', {
+            'result': (SUCCESS, 'test'),
+            'success': '[X] echo ran successfuly \n',
+            'error': '[!!] echo command broken \n'
+        }), ('check', {
+            'result': (CLIENT_ERROR, '[!!] Number of arguments supplied is incorrect'),
+            'success': '[X] check handles incorrect num of args \n',
+            'error': '[!!] check command does not handle no arguments \n'
+        }), ('check test tacocat peanut tunut person peep', {
+            'result': (SUCCESS, '0,1,0,1,0,1'),
+            'success': '[X] check discerns between palindromes and trivial words \n',
+            'error': '[!!] check does not discern between palindromes and trivial words \n'
+        }), ('state num', {
+            'result': (SUCCESS, '3'),
+            'success': '[X] state keeps record of num of current palindromes \n',
+            'error': '[!!] state did not keep record of num of current palindromes  \n'
+        }), ('state list', {
+            'result': (SUCCESS, 'tacocat,tunut,peep'),
+            'success': '[X] state keeps list of current palindromes \n',
+            'error': '[!!] state did not keep list of current palindromes  \n'
+        }), ('state last', {
+            'result': (SUCCESS, 'peep'),
+            'success': '[X] state keeps last seen of current palindromes \n',
+            'error': '[!!] state did not keep last seen of current palindromes  \n'
+        }), ('del 1', {
+            'result': (SUCCESS, '[X] Deleted value at index : 1'),
+            'success': '',
+            'error': ''
+        }), ('state list', {
+            'result': (SUCCESS, 'tacocat,peep'),
+            'success': '[X] del deletes palindromes at specified index \n',
+            'error': '[!!] del does not delete palindromes at specified index  \n'
+        }), ('del -1', {
+            'result': (SUCCESS, '[X] Deleted value at index : -1'),
+            'success': '',
+            'error': ''
+        }), ('state list', {
+            'result': (SUCCESS, ''),
+            'success': '[X] del deletes all palindromes \n',
+            'error': '[!!] del does not delete all palindromes \n'
+        })
+    ]
+
+    print "[X] Running Tests..."
+    for command, res in commands_and_results:
+        assert res['result'] == new_client.handle_command(
+            command), res['error']
+        print(res['success'])
+    print "[X] Test ran successfully, clearing statefile..."
+    new_client.handle_command('del -1')
+
+
+def run_tests():
+    ip = 'localhost'
+    port = 5555
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    server.bind(('0.0.0.0', port))
+    server.listen(10)
+    client.connect((ip, port))
+
+    (conn, (ip, port)) = server.accept()
+    new_client = Client(ip, port, conn)
+    new_client.start()
+    print 'Connection works'
+    run_asserts(new_client)
+    print '\nCool, exiting... \n'
+    os.kill(os.getpid(), signal.SIGKILL)
+
+
 if __name__ == '__main__':
-    main()
-
-
-
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', action='store_true', help='To run tests?')
+    args = parser.parse_args()
+    if args.test:
+        run_tests() 
+    else:
+        main()
