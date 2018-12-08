@@ -1,6 +1,19 @@
 # Simple client server palindrome protocol aka paldcol
 
-To run
+# Getting Started
+
+  Ensure you have the following installed on your machines...
+  
+    Requirements:
+        Python 2.7
+        pip libraries socket, threading & json
+        virtualenv (optional...somewhat)
+        bash/*sh terminal
+        admin priviliges on the listening server
+        
+        thats it for now....
+        
+# Running
 
     python server.py
     
