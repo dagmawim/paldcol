@@ -1,4 +1,7 @@
-# Simple client server palindrome protocol aka paldcol
+# paldcol
+
+Rudimentary implementation of a palindrome protocol written in Python 2.7.
+
 
 # Getting Started
 
